@@ -31,6 +31,7 @@ var CONFIG = {
       b.setAttribute("lang", l === "ar" ? "en" : "ar");
     }
     $$("[data-ph-" + l + "]").forEach(function (el) { el.placeholder = el.getAttribute("data-ph-" + l); });
+    $$("[data-al-" + l + "]").forEach(function (el) { el.setAttribute("aria-label", el.getAttribute("data-al-" + l)); });
     try { localStorage.setItem("lj-lang", l); } catch (e) {}
     hooks.forEach(function (f) { f(); });
   }
@@ -111,72 +112,175 @@ var CONFIG = {
     });
   });
 
-  /* ---------- hero: the CV sheet rewrites itself ---------- */
-  var sheet = $("#sheet");
-  if (sheet) {
-    var CASES = JSON.parse(sheet.getAttribute("data-cases"));
-    var cur = 0, timer = null, typing = null, paused = false;
-    var oldEl = $("#shOld"), newEl = $("#shNew"), n1 = $("#shN1"), n2 = $("#shN2"), cap = $("#shCap");
-    var dots = $$(".sh-dots button");
-    function fill(i, animate) {
-      var c = CASES[i][root.lang] || CASES[i].ar;
-      oldEl.textContent = c.old; n1.textContent = c.n1; n2.textContent = c.n2;
-      if (cap) cap.innerHTML = c.cap + ' <a class="link" href="' + c.href + '">' + c.more + "</a>";
-      dots.forEach(function (d, k) { d.setAttribute("aria-pressed", k === i ? "true" : "false"); });
-      clearTimeout(typing);
-      if (!animate || !MOTION) { newEl.textContent = c.new; sheet.classList.remove("prep"); sheet.classList.add("go"); return; }
-      sheet.classList.remove("go"); sheet.classList.add("prep"); newEl.textContent = "";
-      void sheet.offsetWidth;
-      sheet.classList.remove("prep"); sheet.classList.add("go", "typing");
-      var s = c.new;
-      typing = setTimeout(function step() {
-        var k = newEl.textContent.length + 1;
-        newEl.textContent = s.slice(0, k);
-        if (k < s.length) typing = setTimeout(step, 30);
-        else sheet.classList.remove("typing");
-      }, 1150);
+  /* ---------- home: the opening ----------
+     A sample CV line is struck with her red pen and rewritten, the page flips and folds into a
+     paper plane, and the plane flies from Syria across the dotted map to where her clients work,
+     landing on a pin that opens into her real headline. The finished state is plain HTML and CSS;
+     this only plays over it, once per session, and never with reduced motion. One clock drives
+     every layer (Web Animations, transform/opacity/stroke-dashoffset only), so pausing, skipping
+     and replaying are each one line. */
+  var fl = $("#flight");
+  if (fl) (function () {
+    var KEY = "lj-flight", T = 5700, anims = [], playing = false, first = true, inView = true;
+    var replay = $(".fl-replay", fl), view = $(".fl-view", fl), world = $(".fl-world", fl), cv = $(".fl-cv", fl);
+    var VB = fl.getAttribute("data-vb").split(" ").map(Number);
+    var R = fl.getAttribute("data-route").split(" ").map(Number);
+    var S = [R[0], R[1]], C = [R[2], R[3]], E = [R[4], R[5]];
+
+    function bez(x1, y1, x2, y2) { // CSS cubic-bezier as a function, to keep JS maths in step with WAAPI easing
+      return function (x) {
+        if (x <= 0) return 0; if (x >= 1) return 1;
+        var t = x;
+        for (var i = 0; i < 10; i++) {
+          var cx = 3 * x1 * t * (1 - t) * (1 - t) + 3 * x2 * t * t * (1 - t) + t * t * t - x;
+          var dx = 3 * x1 * (1 - t) * (1 - t) + 6 * (x2 - x1) * t * (1 - t) + 3 * (1 - x2) * t * t;
+          if (Math.abs(cx) < 1e-5 || Math.abs(dx) < 1e-6) break;
+          t = Math.max(0, Math.min(1, t - cx / dx));
+        }
+        return 3 * y1 * t * (1 - t) * (1 - t) + 3 * y2 * t * t * (1 - t) + t * t * t;
+      };
     }
-    // reserve room for the tallest example so nothing below the sheet moves when it rotates
-    function reserve() {
-      sheet.style.minHeight = ""; if (cap) cap.style.minHeight = "";
-      var keep = [oldEl.textContent, newEl.textContent, n1.textContent, n2.textContent, cap ? cap.innerHTML : ""];
-      var typingNow = sheet.classList.contains("typing");
-      var hs = 0, hc = 0;
-      CASES.forEach(function (cs) {
-        var c = cs[root.lang] || cs.ar;
-        oldEl.textContent = c.old; newEl.textContent = c.new;
-        if (cap) cap.innerHTML = c.cap + ' <a class="link" href="' + c.href + '">' + c.more + "</a>";
-        hs = Math.max(hs, sheet.offsetHeight); if (cap) hc = Math.max(hc, cap.offsetHeight);
+    var CAM = [.55, 0, .2, 1], camE = bez.apply(null, CAM), planeE = bez(.42, 0, .25, 1);
+    var C0 = 2950, C1 = 4550, F0 = 3020, F1 = 4800;
+    function cb(a) { return "cubic-bezier(" + a.join(",") + ")"; }
+
+    // the plane's route: a quadratic arc, walked at even speed
+    function q(t) { var a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t; return [a * S[0] + b * C[0] + c * E[0], a * S[1] + b * C[1] + c * E[1]]; }
+    function qd(t) { return [2 * (1 - t) * (C[0] - S[0]) + 2 * t * (E[0] - C[0]), 2 * (1 - t) * (C[1] - S[1]) + 2 * t * (E[1] - C[1])]; }
+    var LUT = [0], N = 240, prev = q(0);
+    for (var i = 1; i <= N; i++) { var p = q(i / N); LUT.push(LUT[i - 1] + Math.hypot(p[0] - prev[0], p[1] - prev[1])); prev = p; }
+    function tAt(f) {
+      var target = f * LUT[N], lo = 0, hi = N;
+      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (LUT[mid] < target) lo = mid; else hi = mid; }
+      var span = LUT[hi] - LUT[lo] || 1;
+      return (lo + (target - LUT[lo]) / span) / N;
+    }
+    function deg(v) { return Math.atan2(v[1], v[0]) * 180 / Math.PI; }
+
+    // one animation per element and property, all on the same clock (duration T)
+    function K(el, frames) {
+      if (!el) return;
+      var kf = frames.map(function (f) { var o = {}; for (var k in f[1]) o[k] = f[1][k]; o.offset = Math.min(1, f[0] / T); if (f[2]) o.easing = f[2]; return o; });
+      if (kf[0].offset > 0) { var a = {}; for (var k in frames[0][1]) a[k] = frames[0][1][k]; a.offset = 0; kf.unshift(a); }
+      if (kf[kf.length - 1].offset < 1) { var z = {}; for (var k2 in frames[frames.length - 1][1]) z[k2] = frames[frames.length - 1][1][k2]; z.offset = 1; kf.push(z); }
+      anims.push(el.animate(kf, { duration: T, fill: "both" }));
+    }
+
+    function play() {
+      if (!fl.animate || !MOTION) return done();
+      anims.forEach(function (a) { a.cancel(); }); anims = [];
+      root.classList.add("intro"); fl.classList.add("playing"); playing = true;
+      if (replay) replay.hidden = true;
+      try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
+
+      // camera: start close on Syria, right under the CV page, then pull back to the whole route
+      var W = world.offsetWidth, WH = world.offsetHeight, pxu = W / VB[2];
+      var ox = (S[0] - VB[0]) / VB[2], oy = (S[1] - VB[1]) / VB[3];
+      var cx = cv.offsetLeft + cv.offsetWidth / 2, cy = cv.offsetTop + cv.offsetHeight / 2;
+      var s0 = 2.6, tx = cx - (view.offsetLeft + ox * W), ty = cy - (view.offsetTop + oy * WH);
+      function cam(e) { return "translate(" + (tx * (1 - e)).toFixed(2) + "px," + (ty * (1 - e)).toFixed(2) + "px) scale(" + (s0 + (1 - s0) * e).toFixed(4) + ")"; }
+      function camAt(ms) { return camE(Math.max(0, Math.min(1, (ms - C0) / (C1 - C0)))); }
+      K(world, [[0, { transform: cam(0) }], [C0, { transform: cam(0) }, cb(CAM)], [C1, { transform: cam(1) }]]);
+      K(view, [[0, { opacity: 0 }], [450, { opacity: .6 }], [C0, { opacity: .6 }], [3600, { opacity: 1 }]]);
+
+      // 1. the red pen: the vague line is struck word by word, the sharp one is written in
+      $$(".fl-old [data-l]", fl).forEach(function (line) {
+        $$(".fx", line).forEach(function (x, i) {
+          var a = 300 + i * 85;
+          K(x, [[a, { transform: "scaleX(0)" }, "cubic-bezier(.6,0,.3,1)"], [a + 190, { transform: "scaleX(1)" }]]);
+        });
       });
-      oldEl.textContent = keep[0]; newEl.textContent = keep[1]; n1.textContent = keep[2]; n2.textContent = keep[3];
-      if (cap) cap.innerHTML = keep[4];
-      if (typingNow) sheet.classList.add("typing");
-      sheet.style.minHeight = hs + "px"; if (cap) cap.style.minHeight = hc + "px";
+      K($(".fl-old", fl), [[950, { opacity: 1 }], [1200, { opacity: .55 }]]);
+      K($(".fl-hi", fl), [[800, { transform: "scaleX(0)" }, "cubic-bezier(.6,0,.3,1)"], [1050, { transform: "scaleX(1)" }]]);
+      $$(".fl-new [data-l]", fl).forEach(function (line) {
+        $$(".fw", line).forEach(function (w, i) {
+          var a = 900 + i * 70;
+          K(w, [[a, { opacity: 0, transform: "translateY(6px)" }, "cubic-bezier(.2,.8,.2,1)"], [a + 260, { opacity: 1, transform: "translateY(0px)" }]]);
+        });
+      });
+      K($(".fl-note", fl), [[1050, { opacity: 0, transform: "translateY(8px)" }, "cubic-bezier(.2,.8,.2,1)"], [1400, { opacity: 1, transform: "translateY(0px)" }], [2120, { opacity: 1, transform: "translateY(0px)" }], [2260, { opacity: 0, transform: "translateY(0px)" }]]);
+      K($(".fl-fill", fl), [[850, { transform: "scaleX(.25)" }, "cubic-bezier(.3,.7,.3,1)"], [1950, { transform: "scaleX(1)" }]]);
+      K($(".fl-ok", fl), [[1950, { transform: "scale(0)" }, "ease-out"], [2080, { transform: "scale(1.3)" }, "ease-in"], [2180, { transform: "scale(1)" }]]);
+
+      // 2. the page turns over and folds into a plane
+      var H = deg(qd(0));
+      K($(".fl-paper", fl), [[2200, { transform: "rotateY(0deg)" }, "ease-in"], [2380, { transform: "rotateY(90deg)" }], [2380, { transform: "rotateY(-90deg)" }, "ease-out"], [2560, { transform: "rotateY(0deg)" }]]);
+      K($(".fl-front", fl), [[2380, { opacity: 1 }], [2380, { opacity: 0 }]]);
+      K($(".fl-back", fl), [[2380, { opacity: 0 }], [2380, { opacity: 1 }]]);
+      K($(".fl-flap.l", fl), [[2580, { transform: "rotate3d(-1,1,0,0deg)" }, "cubic-bezier(.5,0,.3,1)"], [2860, { transform: "rotate3d(-1,1,0,180deg)" }]]);
+      K($(".fl-flap.r", fl), [[2640, { transform: "rotate3d(1,1,0,0deg)" }, "cubic-bezier(.5,0,.3,1)"], [2920, { transform: "rotate3d(1,1,0,180deg)" }]]);
+      K(cv, [[2920, { opacity: 1, transform: "rotate(0deg) scale(1,1)" }, "cubic-bezier(.5,0,.7,1)"], [3070, { opacity: 0, transform: "rotate(" + H.toFixed(1) + "deg) scale(.1,.16)" }]]);
+
+      // 3. the flight: plane, dotted trail and camera share one set of samples
+      var D0 = 50, D1 = W < 480 ? 28 : 32, n = 40, pf = [], tf = [], last = H;
+      function size(ms) { return D0 + (D1 - D0) * camAt(ms); }
+      function scaleAt(ms) { return size(ms) / (56 * pxu * (s0 + (1 - s0) * camAt(ms))); }
+      function pose(x, y, a, k) { return "translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px) rotate(" + a.toFixed(2) + "deg) scale(" + k.toFixed(4) + ")"; }
+      pf.push([2900, { opacity: 0, transform: pose(S[0], S[1], H, scaleAt(2900) * .35) }, "cubic-bezier(.2,.8,.2,1)"]);
+      pf.push([F0, { opacity: 1, transform: pose(S[0], S[1], H, scaleAt(F0)) }]);
+      tf.push([F0, { strokeDashoffset: 1 }]);
+      for (var j = 1; j <= n; j++) {
+        var u = j / n, ms = F0 + (F1 - F0) * u, f = planeE(u), tt = tAt(f), p = q(tt), a = deg(qd(tt));
+        while (a - last > 180) a -= 360;
+        while (a - last < -180) a += 360;
+        last = a;
+        pf.push([ms, { opacity: 1, transform: pose(p[0], p[1], a, scaleAt(ms)) }]);
+        tf.push([ms, { strokeDashoffset: 1 - f }]);
+      }
+      pf.push([F1 + 160, { opacity: 0, transform: pose(E[0], E[1], last, scaleAt(F1) * .2) }]);
+      K($(".fl-plane", fl), pf);
+      K($('.fl-rev[data-k="us"]', fl), tf);
+      K($('.fl-rev[data-k="gulf"]', fl), [[3150, { strokeDashoffset: 1 }, "cubic-bezier(.5,0,.3,1)"], [3900, { strokeDashoffset: 0 }]]);
+      K($('.fl-rev[data-k="eu"]', fl), [[3350, { strokeDashoffset: 1 }, "cubic-bezier(.5,0,.3,1)"], [4150, { strokeDashoffset: 0 }]]);
+
+      // 4. pins land, the US pin opens into her profile
+      function pop(sel, at) {
+        var pin = $(sel, fl); if (!pin) return;
+        K(pin, [[at, { opacity: 0, transform: "scale(0)" }, "cubic-bezier(.2,.8,.2,1)"], [at + 200, { opacity: 1, transform: "scale(1.35)" }, "ease-in-out"], [at + 380, { opacity: 1, transform: "scale(1)" }]]);
+        K($(".lab", pin), [[at + 120, { opacity: 0, transform: "translateY(4px)" }, "ease-out"], [at + 420, { opacity: 1, transform: "translateY(0px)" }]]);
+      }
+      K($(".fl-origin", fl), [[3250, { opacity: 0 }], [3550, { opacity: 1 }]]);
+      K($(".fl-origin .lab", fl), [[3700, { opacity: 0 }], [4000, { opacity: 1 }]]);
+      pop('.fl-pin[data-k="gulf"]', 3820);
+      pop('.fl-pin[data-k="eu"]', 4070);
+      pop('.fl-pin[data-k="us"]', F1 - 40);
+      K($(".fl-stem", fl), [[F1 + 40, { opacity: 0, transform: "scaleY(0)" }, "cubic-bezier(.5,0,.3,1)"], [F1 + 300, { opacity: 1, transform: "scaleY(1)" }]]);
+      K($(".fl-card", fl), [[F1 + 160, { opacity: 0, transform: "translateY(14px) scale(.9)" }, "cubic-bezier(.2,.8,.2,1)"], [5600, { opacity: 1, transform: "translateY(0px) scale(1)" }]]);
+
+      var end = anims[anims.length - 1];
+      if (end) end.finished.then(done, function () {});
+      else done();
     }
-    var rzS;
-    addEventListener("resize", function () { clearTimeout(rzS); rzS = setTimeout(reserve, 150); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserve);
-    var PERIOD = 6500;
-    function next() { cur = (cur + 1) % CASES.length; fill(cur, true); arm(); }
-    function arm() {
-      clearTimeout(timer);
-      dots.forEach(function (d, k) { d.classList.remove("run"); });
-      if (!MOTION || paused || document.hidden) return;
-      var d = dots[cur]; void d.offsetWidth; d.classList.add("run");
-      d.style.setProperty("--period", PERIOD + "ms");
-      timer = setTimeout(next, PERIOD);
+
+    function done() {
+      if (!playing && !root.classList.contains("intro")) return;
+      playing = false;
+      anims.forEach(function (a) { a.cancel(); }); anims = [];
+      root.classList.remove("intro"); fl.classList.remove("playing");
+      if (replay && MOTION) replay.hidden = false;
     }
-    dots.forEach(function (d, k) { d.addEventListener("click", function () { cur = k; fill(k, true); arm(); }); });
-    var dotWrap = dots.length ? dots[0].parentNode : null;
-    if (dotWrap) {
-      dotWrap.addEventListener("focusin", function (e) { if (e.target.matches(":focus-visible")) { paused = true; arm(); } });
-      dotWrap.addEventListener("focusout", function () { paused = false; arm(); });
-    }
-    document.addEventListener("visibilitychange", arm);
-    hooks.push(function () { fill(cur, false); reserve(); });
-    reserve();
-    setTimeout(function () { fill(0, true); arm(); }, MOTION ? 700 : 0);
-  }
+
+    // pause with the tab, skip when it scrolls away or the layout changes, tap or Escape to skip
+    document.addEventListener("visibilitychange", function () {
+      if (playing) anims.forEach(function (a) { if (document.hidden) a.pause(); else a.play(); });
+    });
+    var lastW = innerWidth;
+    addEventListener("resize", function () { if (innerWidth !== lastW) { lastW = innerWidth; if (playing) done(); } });
+    fl.addEventListener("click", function (e) { if (playing && !e.target.closest(".fl-replay")) done(); });
+    document.addEventListener("keydown", function (e) { if (playing && e.key === "Escape") done(); });
+    if (replay) replay.addEventListener("click", function () { if (!playing) play(); });
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (es) {
+        inView = es[es.length - 1].isIntersecting;
+        fl.classList.toggle("idle", !inView); // the ambient loop rests off-screen
+        if (first) { first = false; if (root.classList.contains("intro")) { if (inView) play(); else done(); } return; }
+        if (!inView && playing) done();
+      }, { threshold: 0.2 }).observe(fl);
+    } else done();
+    if (replay && MOTION && !root.classList.contains("intro")) replay.hidden = false;
+  })();
+  else root.classList.remove("intro");
 
   /* ---------- ideas: filter + surprise me ---------- */
   var chips = $$(".chip[data-f]");
@@ -247,12 +351,23 @@ var CONFIG = {
       var k = 0; out.classList.add("typing");
       (function stepT() { k = Math.min(text.length, k + 2); out.textContent = text.slice(0, k); if (k < text.length) msgTyping = setTimeout(stepT, 14); else out.classList.remove("typing"); })();
     }
+    // the letter beside the form writes one line per answer, and folds into its envelope on copy
+    var letter = $("#letter");
     function picks() {
       $$(".pick", wiz).forEach(function (chip) {
         var n = chip.getAttribute("data-for"), el = wiz.querySelector('input[name="' + n + '"]:checked');
         chip.hidden = !el;
         if (el) { var tile = el.closest(".tile"); $(".pk", chip).innerHTML = $(".ti", tile).innerHTML + " " + $("b", tile).innerHTML; }
       });
+      if (letter) {
+        $$(".lt-line", letter).forEach(function (line) {
+          var el = wiz.querySelector('input[name="' + line.getAttribute("data-for") + '"]:checked');
+          line.classList.toggle("on", !!el);
+          if (el) { var tile = el.closest(".tile"); $(".lt-v", line).innerHTML = $(".ti", tile).innerHTML + " " + $("b", tile).innerHTML; }
+          else $(".lt-v", line).textContent = "";
+        });
+        letter.classList.remove("sent");
+      }
     }
     function go(n, dir) {
       n = Math.max(0, Math.min(LAST, n));
@@ -302,6 +417,7 @@ var CONFIG = {
         $("#msgStatus").textContent = (T[root.lang] || T.ar).copied;
         var c = centerOf(btn); burst(c[0], c[1], 26);
         btn.classList.add("done");
+        if (letter) letter.classList.add("sent");
       });
     });
     // arriving from a service card: that service is already ticked
@@ -534,7 +650,7 @@ var CONFIG = {
       });
     });
     $$(".pc").forEach(function (el) { el.setAttribute("data-rv", ""); });
-    $$(".display, .h2, .pull, .lede, .hero-art, .frame, .squig, .map, .lab-out, .cta-row, .reach, .growth, .hero-foot, .shift-prog, .sv, .wiz").forEach(function (el) { if (!el.hasAttribute("data-rv")) el.setAttribute("data-rv", ""); });
+    $$(".display, .h2, .pull, .lede, .frame, .squig, .map, .lab-out, .cta-row, .reach, .growth, .shift-prog, .sv, .wiz").forEach(function (el) { if (!el.hasAttribute("data-rv")) el.setAttribute("data-rv", ""); });
     $$(".note").forEach(function (el) { if (!el.closest(".sheet")) el.setAttribute("data-write", ""); });
     $$(".stamp").forEach(function (el, i) { el.setAttribute("data-stamp", ""); });
     var io = new IntersectionObserver(function (ents) {
@@ -545,7 +661,17 @@ var CONFIG = {
         $$("[data-count]", e.target).concat(e.target.hasAttribute("data-count") ? [e.target] : []).forEach(count);
       });
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
-    $$("[data-rv], [data-write], [data-stamp]").forEach(function (el) { io.observe(el); });
+    $$("[data-rv], [data-stamp]").forEach(function (el) { io.observe(el); });
+    // a margin note starts fully clipped, so the observer would see zero area and never fire:
+    // watch its parent instead and write every note inside it
+    var ioW = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        $$("[data-write]", e.target).forEach(function (w) { w.classList.add("in"); });
+        ioW.unobserve(e.target);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+    $$("[data-write]").forEach(function (el) { ioW.observe(el.parentNode); });
     var io2 = new IntersectionObserver(function (ents) { ents.forEach(function (e) { if (e.isIntersecting) { count(e.target); io2.unobserve(e.target); } }); }, { threshold: 0.4 });
     $$("[data-count]").forEach(function (el) { io2.observe(el); });
   } else {
@@ -583,11 +709,13 @@ var CONFIG = {
     });
     var par = $$("[data-depth]"), hero = $(".hero");
     var px = 0, py = 0;
-    if (hero) hero.addEventListener("pointermove", function (e) { px = e.clientX / innerWidth - 0.5; py = e.clientY / innerHeight - 0.5; });
-    (function raf() {
-      par.forEach(function (el) { var d = parseFloat(el.getAttribute("data-depth")); el.style.translate = (px * d * -22).toFixed(1) + "px " + (py * d * -16).toFixed(1) + "px"; });
-      requestAnimationFrame(raf);
-    })();
+    if (hero && par.length) {
+      hero.addEventListener("pointermove", function (e) { px = e.clientX / innerWidth - 0.5; py = e.clientY / innerHeight - 0.5; });
+      (function raf() {
+        par.forEach(function (el) { var d = parseFloat(el.getAttribute("data-depth")); el.style.translate = (px * d * -22).toFixed(1) + "px " + (py * d * -16).toFixed(1) + "px"; });
+        requestAnimationFrame(raf);
+      })();
+    }
   }
 
   /* ---------- scroll: progress pen line + marquee speed ---------- */
@@ -668,19 +796,6 @@ var CONFIG = {
     if (PHONE.addEventListener) PHONE.addEventListener("change", build);
     build();
   });
-
-  /* ---------- phones: hero example follows a swipe ---------- */
-  if (sheet && "ontouchstart" in window) {
-    var sx = 0, sy = 0;
-    sheet.addEventListener("touchstart", function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
-    sheet.addEventListener("touchend", function (e) {
-      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
-      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-      var fwd = AR() ? dx > 0 : dx < 0, n = $$(".sh-dots button").length;
-      var i = ($$(".sh-dots button").findIndex(function (b) { return b.getAttribute("aria-pressed") === "true"; }) + (fwd ? 1 : n - 1)) % n;
-      $$(".sh-dots button")[i].click();
-    }, { passive: true });
-  }
 
   /* ---------- phones: a message button that waits at the bottom ---------- */
   var dockEl = $("#dock");

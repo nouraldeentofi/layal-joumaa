@@ -10,6 +10,7 @@ Set BASE_URL to the live address once the site has a domain, then run
 import html, json, os
 
 BASE_URL = "https://nouraldeentofi.github.io/layal-joumaa"  # change to the custom domain later, e.g. "https://layaljoumaa.com"
+OG_IMG = "assets/img/og.jpg"  # 1200×630 typographic card, drawn by og.py (no photo)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "site") if os.path.isdir(os.path.join(HERE, "site")) else HERE
@@ -67,6 +68,18 @@ FACTS_EN = [
 ]
 
 LINKEDIN_STATS = dict(followers=14552, impressions=90507, reached=35677, growth=527)
+HEADLINE_LI = "Expert CV and Resume Writer || LinkedIn Optimization || Your personal brand is your new CV"  # her real LinkedIn headline
+
+
+def al(ar, en):
+    """A bilingual accessible name: Arabic by default, swapped by site.js with the language."""
+    return f'aria-label="{html.escape(ar)}" data-al-ar="{html.escape(ar)}" data-al-en="{html.escape(en)}"'
+
+
+# her mark instead of a face: a pen nib over an orange stroke of ink
+NIB = ('<svg class="nib" viewBox="0 0 32 32" aria-hidden="true"><path class="nib-ink" d="M5.5 27c6 1.4 13 1 21.5-1.8"/>'
+       '<g transform="rotate(32 16 14)"><path class="nib-body" d="M16 24.5 9.8 13.6 12.3 4.5h7.4l2.5 9.1z"/>'
+       '<path class="nib-slit" d="M16 24v-8.4"/><circle class="nib-hole" cx="16" cy="14.2" r="1.7"/></g></svg>')
 
 I_LI = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z"/></svg>'
 I_MENU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>'
@@ -80,21 +93,15 @@ NAV = [("index", "الرئيسية", "Home"), ("services", "الخدمات", "Se
        ("stories", "قصص", "Stories"), ("about", "عني", "About"), ("ideas", "أفكار", "Ideas"), ("contact", "تواصل", "Contact")]
 
 
-def pic(name, alt_ar, cls="", eager=False, w=640, h=800):
-    load = 'fetchpriority="high"' if eager else 'loading="lazy"'
-    return (f'<picture class="{cls}"><source srcset="assets/img/{name}.webp" type="image/webp">'
-            f'<img src="assets/img/{name}.jpg" alt="{html.escape(alt_ar)}" width="{w}" height="{h}" {load} decoding="async"></picture>')
-
-
 def header(cur):
     on = ' aria-current="page"'
     links = "".join(f'<a href="{s}.html"{on if s == cur else ""} style="--k:{i}">{t(a, e)}</a>' for i, (s, a, e) in enumerate(NAV))
     return f'''<a class="skip" href="#main">{t("انتقل للمحتوى", "Skip to content")}</a>
 <header class="top"><div class="wrap top-in">
   <a class="brand" href="index.html">{t("<b>ليال جمعة</b><small>كاتبة سيرة ذاتية وخبيرة لينكدإن</small>", "<b>Layal Joumaa</b><small>CV, LinkedIn & personal brand</small>")}</a>
-  <nav class="nav" id="nav" aria-label="Main">{links}
+  <nav class="nav" id="nav" {al("القائمة الرئيسية", "Main")}>{links}
     <div class="nav-extra">
-      <div class="nav-card"><img src="assets/img/layal-face.jpg" alt="" width="56" height="56" loading="lazy" decoding="async">
+      <div class="nav-card"><span class="mark">{NIB}</span>
         <p>{t("<b>ليال جمعة</b><span>بساعدك يحكي ملفك عنك قبل المقابلة</span>", "<b>Layal Joumaa</b><span>Helping your profile speak before the interview</span>")}</p></div>
       <a class="btn btn-orange" href="contact.html">{t("ابعتلي رسالة", "Message me")}</a>
       <a class="btn btn-line js-li" href="{LI}" rel="noopener" target="_blank">{I_LI}LinkedIn</a>
@@ -125,7 +132,7 @@ def footer():
       <p class="sig">{t("ليال", "Layal")}</p>
       <p class="slogan">Branding your <b>Name</b>, boosting your <b>Income</b>.</p>
     </div>
-    <nav aria-label="Footer">{links}</nav>
+    <nav {al("روابط الموقع", "Footer")}>{links}</nav>
     <a class="li js-li" href="{LI}" rel="me noopener" target="_blank">{I_LI}{t("تابعني على LinkedIn", "Follow on LinkedIn")}</a>
   </div>
   <div class="foot-base">
@@ -144,7 +151,7 @@ def person():
         "givenName": "Layal", "familyName": "Joumaa",
         "jobTitle": ["CV & Resume Writer", "LinkedIn Optimization Specialist", "Personal Branding Consultant"],
         "description": "Layal Joumaa (ليال جمعة) is a Syrian CV and resume writer, LinkedIn optimisation specialist and personal-branding consultant. She builds ATS-friendly CVs, cover letters and LinkedIn profiles, and positions graduates, experienced professionals, career changers and company teams for the market they target in Syria, the Gulf, Europe and the US.",
-        "image": url("assets/img/layal-portrait.jpg"), "url": url("index.html"), "sameAs": [LI],
+        "url": url("index.html"), "sameAs": [LI],
         "worksFor": {"@type": "Organization", "name": "Assil Design"},
         "alumniOf": {"@type": "CollegeOrUniversity", "name": "Tishreen University", "alternateName": "جامعة تشرين"},
         "address": {"@type": "PostalAddress", "addressLocality": "Damascus", "addressCountry": "SY"},
@@ -183,7 +190,8 @@ def service():
 def graph(slug, kind, name_en, desc, faq=False):
     g = [person(), service(),
          {"@type": "WebSite", "@id": url("#site"), "name": "Layal Joumaa", "alternateName": "ليال جمعة", "inLanguage": ["ar", "en"], "about": {"@id": url("#layal")}, "publisher": {"@id": url("#layal")}},
-         {"@type": kind, "name": name_en, "description": desc, "url": url(slug + ".html"), "inLanguage": ["ar", "en"], "isPartOf": {"@id": url("#site")}, "about": {"@id": url("#layal")}, "primaryImageOfPage": url("assets/img/layal-portrait.jpg")}]
+         {"@type": kind, "name": name_en, "description": desc, "url": url(slug + ".html"), "inLanguage": ["ar", "en"], "isPartOf": {"@id": url("#site")}, "about": {"@id": url("#layal")},
+          "primaryImageOfPage": {"@type": "ImageObject", "url": url(OG_IMG), "width": 1200, "height": 630}}]
     if faq:
         g.append({"@type": "FAQPage", "mainEntity": [
             {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
@@ -192,15 +200,18 @@ def graph(slug, kind, name_en, desc, faq=False):
 
 
 def page(slug, title_ar, title_en, desc, body, kind="WebPage", faq=False, hero=False):
+    # the home page's opening plays once per session; without JS, or with reduced motion, the finished hero shows
+    intro = ('if(!sessionStorage.getItem("lj-flight")&&"animate" in d)d.classList.add("intro");' if hero else "")
     head_js = ('(function(){var d=document.documentElement,l="ar";try{l=localStorage.getItem("lj-lang")||"ar"}catch(e){}'
                'if(location.hash==="#en")l="en";if(location.hash==="#ar")l="ar";d.lang=l;d.dir=l==="ar"?"rtl":"ltr";'
                'try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&"IntersectionObserver" in window){d.classList.add("motion");'
-               'setTimeout(function(){if(!d.classList.contains("js-ok"))d.classList.remove("motion")},2500)}}catch(e){}})()')
+               f'try{{{intro}}}catch(e){{}}'
+               'setTimeout(function(){if(!d.classList.contains("js-ok"))d.classList.remove("motion","intro")},2500)}}catch(e){}})()')
     full_ar = f"{title_ar} | ليال جمعة" if slug != "index" else title_ar
     full_en = f"{title_en} | Layal Joumaa" if slug != "index" else title_en
     ld = json.dumps(graph(slug, kind, full_en, desc, faq), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     canon = f'<link rel="canonical" href="{url(slug + ".html")}">\n' if BASE_URL else ""
-    pre = '<link rel="preload" href="assets/img/layal-portrait.webp" as="image" type="image/webp">\n' if hero else ""
+    og_alt = "Layal Joumaa (ليال جمعة): CV & resume writer, LinkedIn optimisation and personal branding"
     return f'''<!doctype html>
 <html lang="ar" dir="rtl" data-title-ar="{html.escape(full_ar)}" data-title-en="{html.escape(full_en)}">
 <head>
@@ -215,15 +226,18 @@ def page(slug, title_ar, title_en, desc, body, kind="WebPage", faq=False, hero=F
 <meta property="og:description" content="{html.escape(desc)}">
 <meta property="og:type" content="profile">
 <meta property="profile:first_name" content="Layal"><meta property="profile:last_name" content="Joumaa">
-<meta property="og:image" content="{url("assets/img/og.jpg")}">
+<meta property="og:image" content="{url(OG_IMG)}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{html.escape(og_alt)}">
 <meta property="og:locale" content="ar_SY"><meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{url(OG_IMG)}">
 <meta name="theme-color" content="#F6F5F3">
 {canon}<link rel="me" href="{LI}">
 <link rel="alternate" type="text/plain" href="llms.txt" title="Layal Joumaa: summary for AI assistants">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23242327'/%3E%3Cpath d='M18 44c8 2 20 1 28-3' stroke='%23EE7F2D' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M24 14v22h14' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preload" href="assets/fonts/readex-pro-arabic-full-normal.woff2" as="font" type="font/woff2" crossorigin>
-{pre}<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css">
 <script>{head_js}</script>
 <script type="application/ld+json">{ld}</script>
 </head>
@@ -374,19 +388,21 @@ FAQ = [
      "She doesn't start with the CV. She starts with your path and target market, then positioning, then builds the CV and LinkedIn to tell the same story, so you can carry on well on your own afterwards."),
 ]
 
-SHEET_CASES = [
-    {"ar": {"old": "«ما عندي شي حطه بالـCV غير اسمي ورقمي.»", "new": "مهندس شبكات | 3 مشاريع عملية | تدريب على مشاريع عملاء حقيقيين",
-            "n1": "شو تعلّمت؟ شو طبّقت؟", "n2": "نسخة للخليج، ونسخة لأوروبا", "cap": "من قصة حقيقية: خريج من اللاذقية، اليوم عم يشتغل بالسعودية.", "more": "القصة", "href": "stories.html#sa"},
-     "en": {"old": "“I have nothing to put on my CV except my name and number.”", "new": "Network Engineer | 3 hands-on projects | Internship on live client work",
-            "n1": "What did you learn? What did you apply?", "n2": "One version for the Gulf, one for Europe", "cap": "A real story: a graduate from Latakia, now working in Saudi Arabia.", "more": "Read it", "href": "stories.html#sa"}},
-    {"ar": {"old": "CV بيحكي عن الشخص يلي كنت عليه", "new": "CV بيوضّح الشخص يلي عم تتجه لتصير عليه",
-            "n1": "شو من خبرتك بينتقل معك؟", "n2": "Career Capital ✓", "cap": "Career Shift بدون ما تبلش من الصفر.", "more": "القصة", "href": "stories.html#shift"},
-     "en": {"old": "A CV about the person you used to be", "new": "A CV that shows the person you're becoming",
-            "n1": "What carries over?", "n2": "Career capital ✓", "cap": "A career shift without starting from zero.", "more": "Read it", "href": "stories.html#shift"}},
-    {"ar": {"old": "LinkedIn؟ عندي حساب… بس ما بستخدمه", "new": "LinkedIn أداة: بحث، تقديم، وشبكة بتشتغل معي",
-            "n1": "بروفايل جاهز يستقبل الناس", "n2": "ردود ومقابلات أكتر", "cap": "مهندسة كانت تقدّم للخليج بدون نتيجة.", "more": "القصة", "href": "stories.html#gulf"},
-     "en": {"old": "LinkedIn? I have an account… I just don't use it", "new": "LinkedIn as a tool: search, apply, and a network that works for me",
-            "n1": "A profile ready for visitors", "n2": "More replies, more interviews", "cap": "An engineer applying to the Gulf with no results.", "more": "Read it", "href": "stories.html#gulf"}},
+# The home page opening: a sample CV line is struck and rewritten with her red pen, the page folds
+# into a paper plane, and it flies from Syria across the dotted map to where her clients work today
+# (Syria, the Gulf, Europe, the US: the markets the site names). It lands and opens into her real
+# LinkedIn headline. The sample line comes from the site's own example (the graduate who now works
+# in Saudi Arabia) and is labelled as a sample.
+FLIGHT_SAMPLE = dict(
+    weak=("خريج جديد، وعم دوّر على فرصة", "Fresh graduate looking for opportunities"),
+    sharp=("مهندس شبكات | 3 مشاريع عملية | تدريب على مشاريع عملاء حقيقيين", "Network Engineer | 3 hands-on projects | Internship on live client work"),
+    note=("شو تعلّمت؟ شو طبّقت؟", "What did you learn? What did you apply?"),
+)
+FLIGHT_VB = (60, -70, 940, 400)  # the slice of the dot map the hero shows: from the US to the Gulf
+FLIGHT_DEST = [  # key, arc bend, label placement, Arabic, English
+    ("gulf", 0.6, "b", "الخليج", "The Gulf"),
+    ("eu", 0.6, "t", "أوروبا", "Europe"),
+    ("us", 0.35, "br", "أمريكا", "United States"),
 ]
 
 
@@ -496,7 +512,7 @@ def growth_svg():
     xy = [(x / 100 * W, H - y / 100 * H) for x, y in pts]
     line = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in xy)
     area = line + f" L{W} {H} L0 {H} Z"
-    return f'''<svg class="growth" viewBox="0 -14 {W} {H + 34}" role="img" aria-label="{html.escape("Cumulative LinkedIn impressions rising from near zero to 90,507 between 24 May and 20 June 2026")}">
+    return f'''<svg class="growth" viewBox="0 -14 {W} {H + 34}" role="img" {al("ظهور بوستاتي على LinkedIn عم يطلع من قريب الصفر لـ90,507 بين 24 أيار و20 حزيران 2026", "Cumulative LinkedIn impressions rising from near zero to 90,507 between 24 May and 20 June 2026")}>
   <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EE7F2D" stop-opacity=".35"/><stop offset="1" stop-color="#EE7F2D" stop-opacity="0"/></linearGradient></defs>
   <line class="axis" x1="0" y1="{H}" x2="{W}" y2="{H}"/>
   <path class="area" d="{area}"/><path class="line" pathLength="1" d="{line}"/>
@@ -504,8 +520,105 @@ def growth_svg():
 </svg>'''
 
 
+def _map():
+    with open(os.path.join(HERE, "mapdots.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _arc(S, E, bend):
+    """Control point of the quadratic arc between two map points (same curve as the stories map)."""
+    (sx, sy), (x, y) = S, E
+    return (sx + x) / 2, min(sy, y) - abs(x - sx) * bend - 20
+
+
+def _fwords(s, strike=False):
+    tail = '<i class="fx"></i>' if strike else ""
+    return " ".join(f'<span class="fw">{w}{tail}</span>' for w in s.split(" "))
+
+
+I_REPLAY = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v3.6h3.6"/></svg>')
+
+
+def flight():
+    """Home hero art. The finished state (map, trails, pins, profile card) is plain HTML; site.js plays
+    the opening over it once per session."""
+    data = _map()
+    P = data["places"]
+    x0, y0, vw, vh = FLIGHT_VB
+    pct = lambda p: ((p[0] - x0) / vw * 100, (p[1] - y0) / vh * 100)
+    sy = tuple(P["sy"])
+    land = "".join(f"M{x} {y}h0" for x, y in data["dots"] if x >= x0 - 12)
+    masks, trails, pins, route = "", "", "", ""
+    for key, bend, lab, ar, en in FLIGHT_DEST:
+        E = tuple(P[key])
+        mx, my = _arc(sy, E, bend)
+        d = f"M{sy[0]} {sy[1]}Q{mx:.1f} {my:.1f} {E[0]} {E[1]}"
+        if key == "us":
+            route = f"{sy[0]} {sy[1]} {mx:.1f} {my:.1f} {E[0]} {E[1]}"
+        masks += (f'<mask id="fm-{key}" maskUnits="userSpaceOnUse" x="{x0}" y="{y0}" width="{vw}" height="{vh}">'
+                  f'<path class="fl-rev" data-k="{key}" pathLength="1" d="{d}"/></mask>')
+        trails += f'<path class="fl-trail" d="{d}" mask="url(#fm-{key})"/>'
+        px, py = pct(E)
+        pins += (f'<span class="fl-pin" data-k="{key}" style="--x:{px:.2f}%;--y:{py:.2f}%"><i class="halo"></i><i class="dot"></i>'
+                 f'<span class="lab l-{lab}">{t(ar, en)}</span></span>')
+    ox, oy = pct(sy)
+    ux, uy = pct(P["us"])
+    S, st = FLIGHT_SAMPLE, LINKEDIN_STATS
+    return f'''<figure class="fl" id="flight" data-vb="{x0} {y0} {vw} {vh}" data-route="{route}" style="--ox:{ox:.2f}%;--oy:{oy:.2f}%;--ux:{ux:.2f}">
+  <figcaption class="vh">{t("خريطة: من سوريا للخليج وأوروبا وأمريكا، وين عم يشتغلوا عملائي اليوم.", "Map: from Syria to the Gulf, Europe and the US, where my clients work today.")}</figcaption>
+  <div class="fl-view" aria-hidden="true"><div class="fl-world">
+    <svg class="fl-map" viewBox="{x0} {y0} {vw} {vh}" focusable="false"><defs>{masks}</defs>
+      <path class="fl-land" d="{land}"/>{trails}
+      <g class="fl-plane"><path class="pl-a" d="M30 0-26-14-11 1z"/><path class="pl-b" d="M30 0-11 1-19 12z"/><path class="pl-c" d="M30 0-11 1-6 7z"/></g>
+    </svg>
+    <span class="fl-stem" style="--x:{ux:.2f}%;--y:{uy:.2f}%"></span>
+    <span class="fl-pin fl-origin" style="--x:{ox:.2f}%;--y:{oy:.2f}%"><i class="dot"></i><span class="lab l-bl">{t("سوريا", "Syria")}</span></span>
+    {pins}
+  </div></div>
+  <div class="fl-cv" aria-hidden="true"><div class="fl-paper">
+    <div class="fl-front">
+      <div class="fl-top"><span class="fl-tag">{t("مثال توضيحي", "Sample")}</span><span class="fl-bars"><i></i><i></i></span></div>
+      <p class="fl-k">{t("الـHeadline", "Headline")}</p>
+      <p class="fl-old">{t(_fwords(S["weak"][0], True), _fwords(S["weak"][1], True))}</p>
+      <p class="fl-new"><i class="fl-hi"></i>{t(_fwords(S["sharp"][0]), _fwords(S["sharp"][1]))}</p>
+      <div class="fl-lines"><i></i><i></i></div>
+      <div class="fl-ats"><b>ATS</b><span class="fl-track"><i class="fl-fill"></i></span><i class="fl-ok">✓</i></div>
+    </div>
+    <div class="fl-back"><i class="fl-core"></i><i class="fl-flap l"></i><i class="fl-flap r"></i></div>
+  </div><span class="fl-note">{t(S["note"][0], S["note"][1])}</span></div>
+  <div class="fl-card">
+    <div class="fl-cover" aria-hidden="true"><span class="fl-sig">{t("ليال", "Layal")}</span></div>
+    <div class="fl-body">
+      <p class="fl-name"><b>{t(NAME_AR, NAME_EN)}</b><span class="fl-mark">{NIB}</span></p>
+      <p class="fl-k">{t("الـHeadline تبعي على LinkedIn", "My headline on LinkedIn")}</p>
+      <p class="fl-hl" lang="en" dir="ltr">{html.escape(HEADLINE_LI)}</p>
+      <p class="fl-meta">{t("دمشق، سوريا", "Damascus, Syria")}<span aria-hidden="true"> · </span><b>{st['followers']:,}</b> {t("متابع", "followers")}</p>
+      <a class="btn btn-orange fl-cta" href="contact.html">{t("ابعتلي رسالة", "Send me a message")}<span aria-hidden="true">✎</span></a>
+    </div>
+  </div>
+  <button class="fl-replay" type="button" hidden>{I_REPLAY}<span class="vh">{t("شوف الرحلة من جديد", "Replay the journey")}</span></button>
+</figure>'''
+
+
+def slide():
+    """The idea her workshop photo showed, as a slide: a duty becomes an achievement."""
+    return f'''<figure class="slide" data-tilt>
+  <div class="sl-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="sl-page">
+    <p class="sl-t">{t("الخبرة العملية والإنجازات", "Work experience & achievements")}</p>
+    <ul class="sl-rows">
+      <li class="no"><span class="sl-k">{t("مهمة", "Duty")}</span><s>{t("مسؤول عن المهام اليومية", "Responsible for daily tasks")}</s></li>
+      <li class="yes"><span class="sl-k">{t("إنجاز", "Achievement")}</span><span>{t("شو عملت، وشو تغيّر بسببك", "What you did, and what changed because of it")}</span></li>
+    </ul>
+    <blockquote class="sl-q"><p>{t("الشركات ما عم توظف عدد سنوات خبرة… الشركات عم توظف قيمة.", "Companies don't hire years of experience. They hire value.")}</p></blockquote>
+  </div>
+  <div class="sl-prog" aria-hidden="true"><i></i></div>
+</figure>'''
+
+
 def map_svg():
-    data = json.load(open(os.path.join(HERE, "mapdots.json")))
+    data = _map()
     land = "".join(f"M{x} {y}h0" for x, y in data["dots"])
     P = data["places"]
     sx, sy = P["sy"]
@@ -523,8 +636,8 @@ def map_svg():
         ly = y + (28 if key == "sa" else -12)
         if key == "us":
             ly = y - 14
-        pins += (f'<g class="dest" data-key="{key}" data-to="{ids}" tabindex="0" role="link" aria-label="{html.escape(en)}">'
-                 f'<circle class="halo" cx="{x}" cy="{y}" r="9"/><circle class="dot" cx="{x}" cy="{y}" r="7"/>'
+        pins += (f'<g class="dest" data-key="{key}" data-to="{ids}" tabindex="0" role="link" {al(ar, en)}>'
+                 f'<circle class="hit" cx="{x}" cy="{y}" r="38"/><circle class="halo" cx="{x}" cy="{y}" r="9"/><circle class="dot" cx="{x}" cy="{y}" r="7"/>'
                  f'<text x="{lx}" y="{ly}" text-anchor="{anchor}">{t(ar, en, "tspan")}</text></g>')
     # on phones the map zooms into the Middle East; the US arc then leaves the frame, so label where it exits
     ux, uy = P["us"]; umx, umy = (sx + ux) / 2, min(sy, uy) - abs(ux - sx) * 0.35 - 20
@@ -536,7 +649,7 @@ def map_svg():
             f'{t("أمريكا ←", "← United States", "tspan")}</text></g>')
     origin = (f'<g class="origin"><circle class="dot" cx="{sx}" cy="{sy}" r="7"/>'
               f'<text x="{sx - 12}" y="{sy - 14}" text-anchor="end">{t("سوريا", "Syria", "tspan")}</text></g>')
-    return f'''<figure class="map"><svg viewBox="-20 -70 1270 420" role="group" aria-label="{html.escape("Map: stories from Syria to Saudi Arabia, the Gulf and the United States")}">
+    return f'''<figure class="map"><svg viewBox="-20 -70 1270 420" role="group" {al("خريطة: قصص من سوريا للسعودية والخليج وأمريكا", "Map: stories from Syria to Saudi Arabia, the Gulf and the United States")}>
   <path class="land" d="{land}"/>{arcs}{origin}{pins}{edge}
 </svg><figcaption class="map-hint">{t("مرّر أو اكبس على أي وجهة لتشوف قصتها.", "Hover or tap a destination to see its story.")}</figcaption></figure>'''
 
@@ -545,20 +658,7 @@ def map_svg():
 # Pages
 # =====================================================================
 def home():
-    c0 = SHEET_CASES[0]
-    cases_attr = html.escape(json.dumps(SHEET_CASES, ensure_ascii=False))
-    sheet = f'''<figure class="sheet" id="sheet" data-tilt data-cases="{cases_attr}" aria-label="{html.escape("CV before and after")}">
-  <span class="note sh-note n1" id="shN1" aria-hidden="true">{t(c0["ar"]["n1"], c0["en"]["n1"])}</span>
-  <div class="sh-name" aria-hidden="true"><span class="sh-dot"></span><span class="bars"><span class="bar w60"></span><span class="bar w40"></span></span></div>
-  <p class="sh-label">{t("قبل", "Before")}</p>
-  <p class="old"><del><span class="x" id="shOld">{t(c0["ar"]["old"], c0["en"]["old"])}</span></del></p>
-  <p class="sh-label">{t("بعد", "After")}</p>
-  <p class="new" id="shNew" aria-live="off">{t(c0["ar"]["new"], c0["en"]["new"])}</p>
-  <div class="sh-lines" aria-hidden="true"><span class="bar w90"></span><span class="bar w80"></span><span class="bar w70"></span></div>
-  <span class="note sh-note n2" id="shN2" aria-hidden="true">{t(c0["ar"]["n2"], c0["en"]["n2"])}</span>
-</figure>'''
-    dots = "".join(f'<button type="button" aria-pressed="{"true" if i == 0 else "false"}" aria-label="{i + 1}">{i + 1}</button>' for i in range(len(SHEET_CASES)))
-    system = [("Content يجذب", "Content attracts", "بوست بيوقف الشخص الصح عند اسمك.", "A post that stops the right person at your name."),
+    system =[("Content يجذب", "Content attracts", "بوست بيوقف الشخص الصح عند اسمك.", "A post that stops the right person at your name."),
               ("Profile يعرّف فيك", "Profile introduces", "خلال ثواني لازم يفهم مين انت وشو بتقدم.", "Within seconds they get who you are and what you offer."),
               ("Positioning يوضح قيمتك", "Positioning clarifies", "ليش انت تحديداً، مو حدا غيرك.", "Why you specifically, and not someone else."),
               ("الخدمة بتحوّل الاهتمام لتعاون", "The offer converts", "خطوة واضحة: رسالة، مقابلة، أو عقد.", "A clear next step: a message, an interview, a contract.")]
@@ -573,7 +673,7 @@ def home():
     body = f'''
 <section class="hero"><div class="wrap">
  <div class="hero-grid">
-  <div>
+  <div class="hero-copy">
     <h1 class="display">{t("ملفك المهني لازم يحكي عنك قبل المقابلة.", "Your profile should speak for you before the interview.")}</h1>
     <p class="lede">{t("أنا ليال جمعة. بكتب الـCV، وببني LinkedIn، وبشتغل على الـPositioning، لحتى خبرتك الحقيقية توصل للشخص الصح بالطريقة الصح.",
                       "I'm Layal Joumaa. I write CVs, rebuild LinkedIn profiles and work on positioning, so your real experience reaches the right person in the right way.")}</p>
@@ -584,19 +684,7 @@ def home():
     <p class="reach">{t("أكتر من <strong>14,500</strong> شخص بيتابعوا شغلي على LinkedIn، وعملائي اليوم بسوريا والخليج وأوروبا وأمريكا.",
                        "More than <strong>14,500</strong> people follow my work on LinkedIn, and my clients now work across Syria, the Gulf, Europe and the US.")}</p>
   </div>
-  <div class="hero-art">
-    <div class="arch-wrap" data-depth="0.6"><figure class="arch">{pic("layal-portrait", "ليال جمعة، كاتبة CV وخبيرة LinkedIn", eager=True)}</figure></div>
-    <div class="chips">
-    <span class="chip-f c1" data-depth="1.6">🤍 <b data-count="{st['followers']}">{st['followers']:,}</b> {t("متابع", "followers")}</span>
-    <span class="chip-f c2" data-depth="2.2"><b dir="ltr">+{st['growth']}%</b> {t("ظهور بشهر", "reach in a month")}</span>
-    <span class="chip-f c3" data-depth="1.2">✔ {t("متوافق مع ATS", "ATS-friendly")}</span>
-    </div>
-    {sheet}
-  </div>
- </div>
- <div class="hero-foot">
-   <p class="sh-cap" id="shCap">{t(c0["ar"]["cap"] + ' <a class="link" href="stories.html#sa">' + c0["ar"]["more"] + '</a>', c0["en"]["cap"] + ' <a class="link" href="stories.html#sa">' + c0["en"]["more"] + '</a>')}</p>
-   <div class="sh-dots" role="group" aria-label="{html.escape("Before and after examples")}">{dots}</div>
+  {flight()}
  </div>
 </div></section>
 
@@ -646,7 +734,7 @@ def home():
 </div></section>
 
 <section class="paper"><div class="wrap journey">
-  <div class="frame"><div class="portrait" data-tilt>{pic("layal-workshop", "ليال جمعة جنب لابتوب عليه عرض عن الخبرة العملية والإنجازات", w=474, h=593)}</div></div>
+  <div class="frame">{slide()}</div>
   <div>
     {sec_head("ما وصلت لهون بطريق واحد", "I didn't get here by one road")}
     <div class="trail road-trail" data-trail><span class="trail-line" aria-hidden="true"><span class="trail-fill"></span><span class="trail-head"></span></span>
@@ -705,7 +793,7 @@ def services():
                  "First we decide where you're heading, then every piece is built to tell the same story: your CV, your LinkedIn and what you post.",
                  "مو تجميل… توضيح", "Not polish. Clarity.") + f'''
 <section style="padding-top:0"><div class="wrap sv-layout">
-  <nav class="sv-index" aria-label="Services">{idx}</nav>
+  <nav class="sv-index" {al("الخدمات", "Services")}>{idx}</nav>
   <div class="sv-list">{rows}</div>
 </div></section>
 
@@ -852,6 +940,33 @@ def about():
     lang_html = "".join(
         f'<li><span class="ln">{t(a, e)}</span><span class="meter" style="--lv:{lv}" role="img" aria-label="{lv}/5">' + "".join(f'<i style="--k:{j}"></i>' for j in range(5)) +
         f'</span><small>{t(la, le)}</small></li>' for a, e, la, le, lv in langs)
+    # her own one-page CV, set from the same facts as the timeline (no portrait)
+    jobs = [tl[0], tl[6], tl[4], tl[5], tl[3]]
+    edu, wins = tl[7], [tl[1], tl[2]]
+    cd_jobs = "".join(f'<li><span class="cd-y">{t(ya, ye)}</span><b>{t(ha, he)}</b><small>{t(oa, oe)}</small></li>'
+                      for ya, ye, ha, he, oa, oe, *_ in jobs)
+    cd_wins = "".join(f'<li><b>{t(ha, he)}</b><small>{t(ya, ye)}</small></li>' for ya, ye, ha, he, *_ in wins)
+    cd_certs = "".join(f'<li lang="en">{n} <small>· {y}</small></li>' for n, o, y in certs)
+    cd_langs = "".join(f'<li>{t(a, e)} <small>· {t(la, le)}</small></li>' for a, e, la, le, lv in langs)
+    cvdoc = f'''<div class="cvdoc" role="img" {al("سيرة ليال الذاتية بصفحة وحدة، من نفس المعلومات يلي بهالصفحة", "Layal's CV on one page, set from the facts on this page")} data-tilt>
+  <div class="cd-head">
+    <div><p class="cd-name">{t(NAME_AR, NAME_EN)}</p>
+      <p class="cd-role">{t("كاتبة CV وسيرة ذاتية · تحسين LinkedIn · Personal Branding", "CV & resume writer · LinkedIn optimisation · Personal branding")}</p></div>
+    <span class="cd-mark">{NIB}</span>
+  </div>
+  <p class="cd-meta">{t("دمشق، سوريا", "Damascus, Syria")} · LinkedIn · {t("عن بعد", "Remote")}</p>
+  <p class="cd-tag" lang="en" dir="ltr">“Your personal brand is your new CV”</p>
+  <div class="cd-cols">
+    <div class="cd-main"><p class="cd-h">{t("الخبرة", "Experience")}</p><ol class="cd-jobs">{cd_jobs}</ol></div>
+    <div class="cd-side">
+      <p class="cd-h">{t("التعليم", "Education")}</p><p class="cd-edu"><b>{t(edu[2], edu[3])}</b><small>{t(edu[4], edu[5])} · {edu[1]}</small></p>
+      <p class="cd-h">{t("إنجازات", "Highlights")}</p><ul class="cd-list">{cd_wins}</ul>
+      <p class="cd-h">{t("شهادات", "Certificates")}</p><ul class="cd-list">{cd_certs}</ul>
+      <p class="cd-h">{t("لغات", "Languages")}</p><ul class="cd-list">{cd_langs}</ul>
+    </div>
+  </div>
+  <span class="cd-sig" aria-hidden="true">{t("ليال", "Layal")}</span>
+</div>'''
     body = f'''
 <section class="phead"><div class="wrap about-top">
   <div>
@@ -860,7 +975,7 @@ def about():
                        "I graduated as a software engineer, worked in the field, moved into UI/UX, then found how much I love personal branding. There were times I stopped, got tired and doubted myself, but I always came back to looking ahead.")}</p>
     <p class="note">{t("بدي يضل عندي شي جديد اتعلّمه", "I always want something new to learn")}</p>
   </div>
-  <div class="frame"><div class="portrait" data-tilt>{pic("layal-portrait", "ليال جمعة", eager=True)}</div></div>
+  <div class="frame">{cvdoc}</div>
 </div></section>
 
 <section class="paper"><div class="wrap">
@@ -870,6 +985,7 @@ def about():
 </div></section>
 
 <section><div class="wrap">
+  <h2 class="vh">{t("شهادات ومهارات ولغات", "Certificates, skills and languages")}</h2>
   <div class="facts" data-snap>
     <div class="fact certs"><h3>{t("شهادات", "Certificates")}</h3><ul>{cert_html}</ul></div>
     <div class="fact skills"><h3>{t("مهارات", "Skills")}</h3>{skill_html}</div>
@@ -900,7 +1016,7 @@ def ideas():
                  "I don't set aside time every day to post. Two hours a week to pick topics, write and schedule; the rest of the week is for clients.",
                  "الاستمرارية بدها نظام", "Consistency needs a system") + f'''
 <section style="padding-top:0"><div class="wrap">
-  <div class="ideas-tools"><div class="filters" role="group" aria-label="Topics">{chips}</div>
+  <div class="ideas-tools"><div class="filters" role="group" {al("المواضيع", "Topics")}>{chips}</div>
     <button class="btn btn-line small" type="button" id="surprise">✦ {t("فاجئني بفكرة", "Surprise me")}</button></div>
   <p class="vh" id="feedCount" role="status" aria-live="polite"></p>
   <div class="feed">{posts}</div>
@@ -1017,7 +1133,7 @@ def contact():
         <legend class="wiz-q">{t("لوين رايح؟", "Where are you heading?")}</legend>
         <div class="tiles compact">{tiles("market", mkt)}</div>
       </fieldset>
-      <div class="wiz-pane final" role="group" aria-label="Message">
+      <div class="wiz-pane final" role="group" {al("رسالتك", "Your message")}>
         <div class="picks">{picks}</div>
         <div class="fields">
           <label><span>{t("اسمك", "Your name")}</span><input id="fName" type="text" autocomplete="name" data-ph-ar="اختياري" data-ph-en="Optional"></label>
@@ -1038,8 +1154,21 @@ def contact():
   </div>
 
   <div class="direct">
-    <div class="point-wrap frame"><figure class="photo flip">{pic("layal-pointing", "ليال جمعة عم تأشّر على نموذج الرسالة")}</figure>
-      <span class="note" aria-hidden="true">{t("من هون 👉 أسرع", "Right here 👉 fastest")}</span></div>
+    <div class="letter" id="letter" aria-hidden="true">
+      <span class="note lt-note">{t("كل كبسة بتكتب سطر", "Every tap writes a line")}</span>
+      <div class="lt-env">
+        <div class="lt-back"></div>
+        <div class="lt-paper">
+          <p class="lt-hi">{t("مرحبا ليال 👋", "Hi Layal 👋")}</p>
+          <p class="lt-line" data-for="stage"><span class="lt-v"></span></p>
+          <p class="lt-line" data-for="svc"><span class="lt-v"></span></p>
+          <p class="lt-line" data-for="market"><span class="lt-v"></span></p>
+        </div>
+        <div class="lt-pocket"></div>
+        <div class="lt-flap"></div>
+        <span class="lt-seal">{NIB}</span>
+      </div>
+    </div>
     <h2 class="h3">{t("أو مباشرة", "Or directly")}</h2>
     <a class="row js-li" href="{LI}" rel="noopener" target="_blank"><span class="ic">{I_LI}</span><span><b>LinkedIn</b><small>{t("أسرع طريقة توصلني", "The fastest way to reach me")}</small></span></a>
     <a class="row" id="rowEmail" href="#" hidden><span class="ic">{I_MAIL}</span><span><b>{t("البريد", "Email")}</b><small></small></span></a>
